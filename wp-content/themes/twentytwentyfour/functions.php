@@ -13,9 +13,10 @@
  * Register block styles.
  */
 
-require '../assessment/vendor/autoload.php';
+require  $_SERVER['DOCUMENT_ROOT'] . '/digital-store/vendor/autoload.php';
 
 use Google\Cloud\Firestore\FirestoreClient;
+
 if (!function_exists('twentytwentyfour_block_styles')) :
 	/**
 	 * Register custom block styles
@@ -214,40 +215,41 @@ add_action('init', 'twentytwentyfour_pattern_categories');
 
 
 // Function to log sale to Firestore
-function log_sale_to_firestore($order_id) {
-    // Load the WooCommerce order
-    $order = wc_get_order($order_id);
-    
-    // Get the customer ID
-    $customer_id = $order->get_customer_id();
-    
-    // Get the items in the order
-    $items = $order->get_items();
-    
+function log_sale_to_firestore($order_id)
+{
+	// Load the WooCommerce order
+	$order = wc_get_order($order_id);
+
+	// Get the customer ID
+	$customer_id = $order->get_customer_id();
+
+	// Get the items in the order
+	$items = $order->get_items();
+
 	$firestore = new FirestoreClient();
 
-    // Loop through each item in the order
-    foreach ($items as $item) {
-        // Get the product ID, name, and quantity
-        $product_id = $item->get_product_id();
-        $product_name = $item->get_name();
-        $quantity = $item->get_quantity();
-        
-        // Get the date of the order
-        $date = $order->get_date_created()->format('Y-m-d H:i:s');
-        
-        // Construct the data to be logged
-        $data = [
-            'customer_id' => $customer_id,
-            'product_id' => $product_id,
-            'product_name' => $product_name,
-            'quantity' => $quantity,
-            'date' => $date,
-        ];
-        
-        // Add the data to the Firestore collection named 'sales'
-        $firestore->collection('sales')->add($data);
-    }
+	// Loop through each item in the order
+	foreach ($items as $item) {
+		// Get the product ID, name, and quantity
+		$product_id = $item->get_product_id();
+		$product_name = $item->get_name();
+		$quantity = $item->get_quantity();
+
+		// Get the date of the order
+		$date = $order->get_date_created()->format('Y-m-d H:i:s');
+
+		// Construct the data to be logged
+		$data = [
+			'customer_id' => $customer_id,
+			'product_id' => $product_id,
+			'product_name' => $product_name,
+			'quantity' => $quantity,
+			'date' => $date,
+		];
+
+		// Add the data to the Firestore collection named 'sales'
+		$firestore->collection('sales')->add($data);
+	}
 }
 
 // Hook the function to the 'woocommerce_payment_complete' action
@@ -256,26 +258,27 @@ add_action('woocommerce_payment_complete', 'log_sale_to_firestore');
 
 
 // Send daily summary email
-function sendDailySummaryEmail() {
-    // Get sales data
+function sendDailySummaryEmail()
+{
+	// Get sales data
 	$firestore = new FirestoreClient();
-    $salesCollection = $db->collection('sales');
-    $query = $salesCollection->where('date', '>=', new \DateTime('today'))->where('date', '<', new \DateTime('tomorrow'));
-    $snapshot = $query->documents();
-    $salesData = [];
-    foreach ($snapshot as $document) {
-        $salesData[] = $document->data();
-    }
+	$salesCollection = $db->collection('sales');
+	$query = $salesCollection->where('date', '>=', new \DateTime('today'))->where('date', '<', new \DateTime('tomorrow'));
+	$snapshot = $query->documents();
+	$salesData = [];
+	foreach ($snapshot as $document) {
+		$salesData[] = $document->data();
+	}
 
-    // Calculate summary
-    $totalSales = count($salesData);
-    // Add more calculations as needed
+	// Calculate summary
+	$totalSales = count($salesData);
+	// Add more calculations as needed
 
-    // Send email
-    $mail = new PHPMailer(true);
-    $mail->isSMTP();
-    // Configure mail settings
-    $mail->send();
+	// Send email
+	$mail = new PHPMailer(true);
+	$mail->isSMTP();
+	// Configure mail settings
+	$mail->send();
 }
 
 // Call the function at the end of each day
